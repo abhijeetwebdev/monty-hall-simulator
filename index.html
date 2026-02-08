@@ -72,7 +72,7 @@
       flex: 1;
       min-width: 80px;
       height: 140px;
-      font-size: 36px;
+      font-size: 80px;
       border-radius: 10px;
       border: 2px solid #ccc;
       background: #fafafa;
@@ -97,7 +97,7 @@
     }
 
     .doors button.revealed {
-      font-size: 40px;
+      font-size: 100px;
       transition: font-size 0.3s ease;
     }
 
@@ -213,26 +213,34 @@
       }
     }
 
-    .primary {
+    .btn-primary {
       background: #1976d2;
       color: #fff;
     }
 
-    .primary:disabled {
+    .btn-primary:hover:not(:disabled) {
+      background: #1565c0;
+    }
+
+    .btn-primary:disabled {
       background: #90caf9;
       cursor: default;
     }
 
-    .secondary {
+    .btn-secondary {
       background: #e0e0e0;
     }
 
-    .secondary:disabled {
+    .btn-secondary:hover:not(:disabled) {
+      background: #d5d5d5;
+    }
+
+    .btn-secondary:disabled {
       background: #f0f0f0;
       cursor: default;
     }
 
-    .warning {
+    .btn-danger {
       background: #ff9800;
       color: #fff;
       padding: 10px 18px;
@@ -243,7 +251,7 @@
       transition: background 0.2s;
     }
 
-    .warning:hover {
+    .btn-danger:hover {
       background: #f57c00;
     }
 
@@ -309,9 +317,18 @@
       font-weight: 600;
     }
 
+    .chart-container {
+      position: relative;
+      width: 100%;
+      min-width: 300px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
     canvas {
-      max-width: 300px;
-      max-height: 250px;
+      width: 100% !important;
+      height: auto !important;
+      display: block;
     }
 
     .line {
@@ -465,10 +482,6 @@
         font-size: 28px;
       }
 
-      .doors button.revealed {
-        font-size: 32px;
-      }
-
       .stats-chart-container {
         flex-direction: column;
       }
@@ -551,10 +564,10 @@
     </div>
 
     <div class="controls">
-      <button id="switchBtn" class="primary" onclick="finalChoice(true)" disabled>Switch</button>
-      <button id="stayBtn" class="secondary" onclick="finalChoice(false)" disabled>Stay</button>
-      <button id="revealBtn" class="primary" onclick="revealResult()" disabled>Reveal</button>
-      <button id="restartBtn" class="secondary" onclick="reset()" disabled>Restart</button>
+      <button id="switchBtn" class="btn-primary" onclick="finalChoice(true)" disabled>Switch Doors</button>
+      <button id="stayBtn" class="btn-secondary" onclick="finalChoice(false)" disabled>Stay with Choice</button>
+      <button id="revealBtn" class="btn-primary" onclick="revealResult()" disabled>Show Result</button>
+      <button id="restartBtn" class="btn-secondary" onclick="reset()" disabled>Play Again</button>
     </div>
 
     <!-- Tabs Navigation -->
@@ -609,7 +622,7 @@
           <label for="simCount">Games:</label>
           <input type="number" id="simCount" value="1000" min="10" max="100000" step="10">
         </div>
-        <button id="simBtn" class="primary" onclick="runSimulation()">Run Simulation</button>
+        <button id="simBtn" class="btn-primary" onclick="runSimulation()">Run Simulation</button>
       </div>
 
       <div class="stats-chart-container">
@@ -685,12 +698,14 @@
         </div>
 
         <div class="stats-section">
-          <canvas id="resultChart"></canvas>
+          <div class="chart-container">
+            <canvas id="resultChart"></canvas>
+          </div>
         </div>
       </div>
 
       <div style="margin-top: 20px; text-align: center;">
-        <button class="warning" onclick="resetStats()">Reset All Statistics</button>
+        <button class="btn-danger" onclick="resetStats()">Clear All Statistics</button>
       </div>
     </div>
   </div>
@@ -744,7 +759,8 @@
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
+        aspectRatio: 1.5,
         plugins: {
           legend: { display: false },
           tooltip: {
