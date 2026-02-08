@@ -6,6 +6,10 @@
   <title>Monty Hall Simulator</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -15,42 +19,75 @@
       background: linear-gradient(135deg, #1e3c72, #2a5298);
       font-family: "Segoe UI", system-ui, sans-serif;
       color: #333;
+      padding: 20px;
     }
 
     .game {
       background: #fff;
       border-radius: 12px;
       padding: 30px 40px;
-      width: 550px;
+      width: 100%;
+      max-width: 550px;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
       text-align: center;
-      margin: 5rem 0;
+      margin: 2rem auto;
     }
 
     h2 {
       margin-top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .info-btn {
+      background: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      font-size: 16px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .info-btn:hover {
+      background: #1565c0;
     }
 
     .doors {
       display: flex;
       justify-content: space-between;
       margin: 25px 0;
+      gap: 10px;
     }
 
     .doors button {
-      width: 110px;
+      flex: 1;
+      min-width: 80px;
       height: 140px;
       font-size: 36px;
       border-radius: 10px;
       border: 2px solid #ccc;
       background: #fafafa;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.3s ease;
     }
 
     .doors button:hover:not(:disabled) {
       transform: translateY(-4px);
       box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .doors button.selected:hover:not(:disabled) {
+      box-shadow: inset 0 0 0 3px #1976d2, 0 8px 16px rgba(25, 118, 210, 0.4);
+      transform: scale(1.02) translateY(-4px);
     }
 
     .doors button:disabled {
@@ -64,10 +101,29 @@
       transition: font-size 0.3s ease;
     }
 
+    .doors button.winner {
+      border-color: #4caf50;
+      background: #e8f5e9;
+      animation: pulse 0.5s ease-in-out;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
     .selected {
       border-color: #1976d2;
-      background: #e3f2fd;
-      box-shadow: inset 0 0 0 2px #1976d2;
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+      box-shadow: inset 0 0 0 3px #1976d2, 0 4px 8px rgba(25, 118, 210, 0.3);
+      transform: scale(1.02);
     }
 
     .status {
@@ -84,13 +140,77 @@
       margin-bottom: 15px;
     }
 
-    .controls button {
+    .controls button, .sim-controls button {
       padding: 10px 18px;
       border-radius: 6px;
       border: none;
       font-size: 14px;
       cursor: pointer;
       transition: background 0.2s;
+    }
+
+    .game-section-header {
+      font-weight: 600;
+      color: #1976d2;
+      font-size: 16px;
+      margin: 20px 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e3f2fd;
+      text-align: left;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #e0e0e0;
+      margin: 50px 0 0 0;
+      gap: 0;
+    }
+
+    .tab-button {
+      flex: 1;
+      padding: 12px 20px;
+      background: #f5f5f5;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .tab-button:hover {
+      background: #e8e8e8;
+      color: #333;
+    }
+
+    .tab-button.active {
+      background: #fff;
+      color: #1976d2;
+      border-bottom-color: #1976d2;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 20px 0;
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .primary {
@@ -112,27 +232,81 @@
       cursor: default;
     }
 
+    .warning {
+      background: #ff9800;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .warning:hover {
+      background: #f57c00;
+    }
+
     /* Stats & chart layout */
     .stats-chart-container {
       display: flex;
       flex-direction: row;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-around;
       margin-top: 20px;
       flex-wrap: wrap;
+      gap: 20px;
     }
 
-    .stats-box {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      font-size: 14px;
-      padding: 10px 15px;
-      border: 1px solid #ddd;
+    .stats-section {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      background: #fff;
       border-radius: 8px;
-      background: #f9f9f9;
-      min-width: 160px;
-      margin-bottom: 15px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .stats-table caption {
+      font-weight: 600;
+      color: #1976d2;
+      padding: 12px;
+      background: #e3f2fd;
+      text-align: left;
+      font-size: 15px;
+    }
+
+    .stats-table th,
+    .stats-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .stats-table th {
+      background: #f5f5f5;
+      font-weight: 600;
+      color: #666;
+      font-size: 13px;
+    }
+
+    .stats-table td {
+      color: #333;
+    }
+
+    .stats-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .stats-table .highlight {
+      background: #fff3cd;
+      font-weight: 600;
     }
 
     canvas {
@@ -142,13 +316,231 @@
 
     .line {
       margin: 2rem 0;
+      display: none;
+    }
+
+    .sim-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .sim-input-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f5f5f5;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+    }
+
+    .sim-input-group label {
+      font-size: 14px;
+      color: #555;
+      font-weight: 500;
+    }
+
+    .sim-input-group input {
+      width: 100px;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #fff;
+      padding: 40px 50px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 85vh;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 32px;
+      font-weight: bold;
+      color: #999;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      width: 36px;
+      height: 36px;
+      line-height: 1;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      color: #333;
+      background: #f0f0f0;
+    }
+
+    .modal h3 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: #1976d2;
+      font-size: 24px;
+      padding-right: 40px;
+    }
+
+    .modal p {
+      text-align: left;
+      line-height: 1.2;
+      margin-bottom: 16px;
+      font-size: 15px;
+      color: #444;
+    }
+
+    .modal ol,
+    .modal ul {
+      text-align: left;
+      line-height: 1.4;
+      margin-bottom: 20px;
+      padding-left: 24px;
+    }
+
+    .modal li {
+      margin-bottom: 10px;
+      font-size: 15px;
+      color: #444;
+    }
+
+    .modal strong {
+      color: #1976d2;
+    }
+
+    .probability-highlight {
+      background: #fff3cd;
+      padding: 20px;
+      border-left: 4px solid #ff9800;
+      margin: 20px 0;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+
+    .probability-highlight strong {
+      color: #f57c00;
+      font-size: 16px;
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      .game {
+        padding: 20px;
+      }
+
+      .doors button {
+        height: 120px;
+        font-size: 28px;
+      }
+
+      .doors button.revealed {
+        font-size: 32px;
+      }
+
+      .stats-chart-container {
+        flex-direction: column;
+      }
+
+      .stats-section {
+        width: 100%;
+        min-width: 100%;
+      }
+
+      .sim-input-group {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .sim-controls {
+        flex-direction: column;
+      }
+
+      canvas {
+        max-width: 100%;
+      }
+
+      .modal-content {
+        padding: 30px 25px;
+        width: 95%;
+        max-height: 90vh;
+      }
+
+      .modal h3 {
+        font-size: 20px;
+      }
+
+      .modal p,
+      .modal li {
+        font-size: 14px;
+      }
+
+      h2 {
+        font-size: 1.5rem;
+      }
     }
   </style>
 </head>
 
 <body>
+  <!-- Modal -->
+  <div class="modal" id="helpModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <h3>🎮 How to Play</h3>
+      <ol>
+        <li><strong>Choose a door</strong> - One has a car 🚗, the others have goats 🐐</li>
+        <li><strong>Host reveals a goat</strong> behind one of the remaining doors</li>
+        <li><strong>Switch or stay?</strong> - Decide to keep your choice or switch</li>
+        <li><strong>Reveal</strong> - See if you won the car!</li>
+      </ol>
+
+      <div class="probability-highlight">
+        <strong>🎯 The Paradox:</strong> Switching gives you a <strong>66.7% (2/3)</strong> chance of winning, while staying gives only <strong>33.3% (1/3)</strong>!
+        <br><br>
+        <strong>Why?</strong> Your first choice has 1/3 chance. The other two doors have 2/3. When the host eliminates one wrong door, that 2/3 probability transfers to the remaining door. Switching effectively gives you both other doors!
+      </div>
+
+      <p><strong>💡 Tip:</strong> Run the simulation to prove this counterintuitive result!</p>
+    </div>
+  </div>
+
   <div class="game">
-    <h2>Monty Hall Simulator</h2>
+    <h2>
+      <span>Monty Hall Simulator</span>
+      <button class="info-btn" onclick="openModal()" title="How to Play">?</button>
+    </h2>
 
     <div class="status" id="status">Pick a door</div>
 
@@ -165,27 +557,157 @@
       <button id="restartBtn" class="secondary" onclick="reset()" disabled>Restart</button>
     </div>
 
-    <hr class="line">
-
-    <div class="controls">
-      <button id="simBtn" class="primary" onclick="runSimulation()">Run Simulation (1000)</button>
+    <!-- Tabs Navigation -->
+    <div class="tabs">
+      <button class="tab-button active" onclick="switchTab(event, 'manual')">🎮 Manual Game</button>
+      <button class="tab-button" onclick="switchTab(event, 'simulation')">🤖 Simulation</button>
+      <button class="tab-button" onclick="switchTab(event, 'overall')">🎯 Overall</button>
     </div>
-    <div class="stats-chart-container">
-      <div class="stats-box">
-        <div>Total games: <span id="total">0</span></div>
-        <div>Switch wins: <span id="switchWins">0</span></div>
-        <div>Stay wins: <span id="stayWins">0</span></div>
-        <div>Switch win %: <span id="switchPct">0%</span></div>
-        <div>Stay win %: <span id="stayPct">0%</span></div>
+
+    <!-- Manual Game Tab -->
+    <div id="manual-tab" class="tab-content active">
+      <div class="stats-chart-container">
+        <div class="stats-section">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Games Played</td>
+                <td><span id="manualTotal">0</span></td>
+              </tr>
+              <tr>
+                <td>Switch Wins</td>
+                <td><span id="manualSwitchWins">0</span></td>
+              </tr>
+              <tr>
+                <td>Stay Wins</td>
+                <td><span id="manualStayWins">0</span></td>
+              </tr>
+              <tr class="highlight">
+                <td>Switch Win %</td>
+                <td><span id="manualSwitchPct">0%</span></td>
+              </tr>
+              <tr class="highlight">
+                <td>Stay Win %</td>
+                <td><span id="manualStayPct">0%</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <canvas id="resultChart"></canvas>
+    </div>
+
+    <!-- Simulation Tab -->
+    <div id="simulation-tab" class="tab-content">
+      <div class="sim-controls">
+        <div class="sim-input-group">
+          <label for="simCount">Games:</label>
+          <input type="number" id="simCount" value="1000" min="10" max="100000" step="10">
+        </div>
+        <button id="simBtn" class="primary" onclick="runSimulation()">Run Simulation</button>
+      </div>
+
+      <div class="stats-chart-container">
+        <div class="stats-section">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Games Played</td>
+                <td><span id="simTotal">0</span></td>
+              </tr>
+              <tr>
+                <td>Switch Wins</td>
+                <td><span id="simSwitchWins">0</span></td>
+              </tr>
+              <tr>
+                <td>Stay Wins</td>
+                <td><span id="simStayWins">0</span></td>
+              </tr>
+              <tr class="highlight">
+                <td>Switch Win %</td>
+                <td><span id="simSwitchPct">0%</span></td>
+              </tr>
+              <tr class="highlight">
+                <td>Stay Win %</td>
+                <td><span id="simStayPct">0%</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overall Tab -->
+    <div id="overall-tab" class="tab-content">
+      <div class="stats-chart-container">
+        <div class="stats-section">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Total Games</td>
+                <td><span id="total">0</span></td>
+              </tr>
+              <tr>
+                <td>Total Switch Wins</td>
+                <td><span id="totalSwitchWins">0</span></td>
+              </tr>
+              <tr>
+                <td>Total Stay Wins</td>
+                <td><span id="totalStayWins">0</span></td>
+              </tr>
+              <tr class="highlight">
+                <td>Switch Win %</td>
+                <td><span id="switchPct">0%</span></td>
+              </tr>
+              <tr class="highlight">
+                <td>Stay Win %</td>
+                <td><span id="stayPct">0%</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="stats-section">
+          <canvas id="resultChart"></canvas>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; text-align: center;">
+        <button class="warning" onclick="resetStats()">Reset All Statistics</button>
+      </div>
     </div>
   </div>
 
   <script>
-    let carDoor, playerPick, openedDoor, finalPick, switched;
-    let total = 0, switchWins = 0, stayWins = 0;
+    // Constants
+    const NUM_DOORS = 3;
+    const STORAGE_KEY = 'montyHallStats';
 
+    // Game state
+    let carDoor, playerPick, openedDoor, finalPick, switched;
+
+    // Statistics
+    let manualTotal = 0, manualSwitchWins = 0, manualStayWins = 0;
+    let simTotal = 0, simSwitchWins = 0, simStayWins = 0;
+
+    // DOM elements
     const status = document.getElementById("status");
     const switchBtn = document.getElementById("switchBtn");
     const stayBtn = document.getElementById("stayBtn");
@@ -193,8 +715,18 @@
     const restartBtn = document.getElementById("restartBtn");
 
     const totalEl = document.getElementById("total");
-    const switchWinsEl = document.getElementById("switchWins");
-    const stayWinsEl = document.getElementById("stayWins");
+    const totalSwitchWinsEl = document.getElementById("totalSwitchWins");
+    const totalStayWinsEl = document.getElementById("totalStayWins");
+    const manualTotalEl = document.getElementById("manualTotal");
+    const manualSwitchWinsEl = document.getElementById("manualSwitchWins");
+    const manualStayWinsEl = document.getElementById("manualStayWins");
+    const manualSwitchPctEl = document.getElementById("manualSwitchPct");
+    const manualStayPctEl = document.getElementById("manualStayPct");
+    const simTotalEl = document.getElementById("simTotal");
+    const simSwitchWinsEl = document.getElementById("simSwitchWins");
+    const simStayWinsEl = document.getElementById("simStayWins");
+    const simSwitchPctEl = document.getElementById("simSwitchPct");
+    const simStayPctEl = document.getElementById("simStayPct");
     const switchPctEl = document.getElementById("switchPct");
     const stayPctEl = document.getElementById("stayPct");
 
@@ -212,8 +744,16 @@
       },
       options: {
         responsive: true,
+        maintainAspectRatio: true,
         plugins: {
-          legend: { display: false }
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                return context.parsed.y.toFixed(2) + '%';
+              }
+            }
+          }
         },
         scales: {
           y: {
@@ -225,8 +765,93 @@
       }
     });
 
+    // Load stats from localStorage
+    function loadStats() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          manualTotal = data.manualTotal || 0;
+          manualSwitchWins = data.manualSwitchWins || 0;
+          manualStayWins = data.manualStayWins || 0;
+          simTotal = data.simTotal || 0;
+          simSwitchWins = data.simSwitchWins || 0;
+          simStayWins = data.simStayWins || 0;
+          updateStats();
+        } catch (e) {
+          console.error('Failed to load stats:', e);
+        }
+      }
+    }
+
+    // Save stats to localStorage
+    function saveStats() {
+      const data = {
+        manualTotal,
+        manualSwitchWins,
+        manualStayWins,
+        simTotal,
+        simSwitchWins,
+        simStayWins
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    // Reset all statistics
+    function resetStats() {
+      if (confirm('Reset all statistics? This cannot be undone.')) {
+        manualTotal = 0;
+        manualSwitchWins = 0;
+        manualStayWins = 0;
+        simTotal = 0;
+        simSwitchWins = 0;
+        simStayWins = 0;
+        saveStats();
+        updateStats();
+        status.innerText = "Statistics reset!";
+      }
+    }
+
+    // Modal functions
+    function openModal() {
+      document.getElementById('helpModal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('helpModal').classList.remove('show');
+    }
+
+    // Close modal on outside click
+    window.onclick = function (event) {
+      const modal = document.getElementById('helpModal');
+      if (event.target === modal) {
+        closeModal();
+      }
+    }
+
+    // Tab switching function
+    function switchTab(event, tabName) {
+      // Hide all tab contents
+      const tabContents = document.querySelectorAll('.tab-content');
+      tabContents.forEach(content => {
+        content.classList.remove('active');
+      });
+
+      // Remove active class from all tab buttons
+      const tabButtons = document.querySelectorAll('.tab-button');
+      tabButtons.forEach(button => {
+        button.classList.remove('active');
+      });
+
+      // Show the selected tab content
+      document.getElementById(tabName + '-tab').classList.add('active');
+
+      // Add active class to the clicked button
+      event.currentTarget.classList.add('active');
+    }
+
     function reset() {
-      carDoor = Math.floor(Math.random() * 3);
+      carDoor = Math.floor(Math.random() * NUM_DOORS);
       playerPick = null;
       openedDoor = null;
       finalPick = null;
@@ -239,106 +864,204 @@
       revealBtn.disabled = true;
       restartBtn.disabled = true;
 
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < NUM_DOORS; i++) {
         const d = document.getElementById("d" + i);
         d.innerText = "🚪";
         d.disabled = false;
-        d.classList.remove("selected", "revealed");
+        d.classList.remove("selected", "revealed", "winner");
       }
     }
 
+    // Initialize
+    loadStats();
     reset();
 
     function pickDoor(choice) {
-      if (playerPick !== null) return;
+      // Initial pick - first time choosing a door
+      if (playerPick === null) {
+        playerPick = choice;
+        document.getElementById("d" + choice).classList.add("selected");
 
-      playerPick = choice;
-      document.getElementById("d" + choice).classList.add("selected");
-
-      for (let i = 0; i < 3; i++) {
-        if (i !== playerPick && i !== carDoor) {
-          openedDoor = i;
-          break;
+        // Host opens a door with a goat (not player's choice, not the car)
+        for (let i = 0; i < NUM_DOORS; i++) {
+          if (i !== playerPick && i !== carDoor) {
+            openedDoor = i;
+            break;
+          }
         }
+
+        document.getElementById("d" + openedDoor).innerText = "🐐";
+        document.getElementById("d" + openedDoor).disabled = true;
+
+        status.innerText = "A goat is revealed. Switch or stay?";
+        switchBtn.disabled = false;
+        stayBtn.disabled = false;
+        return;
       }
 
-      document.getElementById("d" + openedDoor).innerText = "🐐";
-      document.getElementById("d" + openedDoor).disabled = true;
+      // After initial pick - allow switching between unopened doors
+      if (choice === openedDoor) return; // Can't click the opened door
 
-      status.innerText = "A goat is revealed. Switch or stay?";
-      switchBtn.disabled = false;
-      stayBtn.disabled = false;
+      // Determine if this is a switch or stay
+      const isSwitch = choice !== playerPick;
+      finalPick = choice;
+      switched = isSwitch;
+
+      // Update visual selection
+      for (let i = 0; i < NUM_DOORS; i++) {
+        document.getElementById("d" + i).classList.remove("selected");
+      }
+      document.getElementById("d" + choice).classList.add("selected");
+
+      revealBtn.disabled = false;
+      status.innerText = isSwitch ? 
+        "Switched! Ready to reveal. You can still change your mind!" : 
+        "Staying! Ready to reveal. You can still change your mind!";
     }
 
     function finalChoice(doSwitch) {
       switched = doSwitch;
-      finalPick = playerPick;
 
       if (doSwitch) {
-        finalPick = [0, 1, 2].find(d => d !== playerPick && d !== openedDoor);
-        document.getElementById("d" + playerPick).classList.remove("selected");
-        document.getElementById("d" + finalPick).classList.add("selected");
+        // Switch to the other unopened door
+        for (let i = 0; i < NUM_DOORS; i++) {
+          if (i !== playerPick && i !== openedDoor) {
+            finalPick = i;
+            break;
+          }
+        }
+      } else {
+        // Stay with original choice
+        finalPick = playerPick;
       }
 
-      switchBtn.disabled = true;
-      stayBtn.disabled = true;
+      // Update visual selection - remove from all doors first
+      for (let i = 0; i < NUM_DOORS; i++) {
+        document.getElementById("d" + i).classList.remove("selected");
+      }
+      
+      // Add selection to the final pick
+      document.getElementById("d" + finalPick).classList.add("selected");
+
       revealBtn.disabled = false;
-      status.innerText = "Ready to reveal the result";
+      status.innerText = doSwitch ? 
+        "Switched! Ready to reveal. You can still change your mind!" : 
+        "Staying! Ready to reveal. You can still change your mind!";
     }
 
     function revealResult() {
-      total++;
+      manualTotal++;
 
-      for (let i = 0; i < 3; i++) {
+      // Disable Switch and Stay buttons after reveal
+      switchBtn.disabled = true;
+      stayBtn.disabled = true;
+
+      for (let i = 0; i < NUM_DOORS; i++) {
         const door = document.getElementById("d" + i);
         door.innerText = i === carDoor ? "🚗" : "🐐";
         door.disabled = true;
         door.classList.add("revealed");
+        if (i === carDoor) {
+          door.classList.add("winner");
+        }
       }
 
       if (finalPick === carDoor) {
-        status.innerText = "🎉 You won the car!";
-        switched ? switchWins++ : stayWins++;
+        status.innerText = switched ?
+          "🎉 You won by switching!" :
+          "🎉 You won by staying!";
+        switched ? manualSwitchWins++ : manualStayWins++;
       } else {
-        status.innerText = "🐐 You got a goat.";
+        status.innerText = switched ?
+          "🐐 Lost - but switching is still the better strategy!" :
+          "🐐 Lost - try switching next time!";
       }
 
+      saveStats();
       updateStats();
       revealBtn.disabled = true;
       restartBtn.disabled = false;
     }
 
     function updateStats() {
-      totalEl.innerText = total;
-      switchWinsEl.innerText = switchWins;
-      stayWinsEl.innerText = stayWins;
+      const total = manualTotal + simTotal;
+      const switchWins = manualSwitchWins + simSwitchWins;
+      const stayWins = manualStayWins + simStayWins;
+
+      // Update manual stats
+      manualTotalEl.innerText = manualTotal.toLocaleString();
+      manualSwitchWinsEl.innerText = manualSwitchWins.toLocaleString();
+      manualStayWinsEl.innerText = manualStayWins.toLocaleString();
+      manualSwitchPctEl.innerText = manualTotal ? ((manualSwitchWins / manualTotal) * 100).toFixed(2) + "%" : "0%";
+      manualStayPctEl.innerText = manualTotal ? ((manualStayWins / manualTotal) * 100).toFixed(2) + "%" : "0%";
+
+      // Update simulation stats
+      simTotalEl.innerText = simTotal.toLocaleString();
+      simSwitchWinsEl.innerText = simSwitchWins.toLocaleString();
+      simStayWinsEl.innerText = simStayWins.toLocaleString();
+      simSwitchPctEl.innerText = simTotal ? ((simSwitchWins / simTotal) * 100).toFixed(2) + "%" : "0%";
+      simStayPctEl.innerText = simTotal ? ((simStayWins / simTotal) * 100).toFixed(2) + "%" : "0%";
+
+      // Update overall stats
+      totalEl.innerText = total.toLocaleString();
+      totalSwitchWinsEl.innerText = switchWins.toLocaleString();
+      totalStayWinsEl.innerText = stayWins.toLocaleString();
       switchPctEl.innerText = total ? ((switchWins / total) * 100).toFixed(2) + "%" : "0%";
       stayPctEl.innerText = total ? ((stayWins / total) * 100).toFixed(2) + "%" : "0%";
 
-      chart.data.datasets[0].data = total ? [(switchWins / total) * 100, (stayWins / total) * 100] : [0, 0];
+      // Update chart
+      chart.data.datasets[0].data = total ?
+        [(switchWins / total) * 100, (stayWins / total) * 100] :
+        [0, 0];
       chart.update();
     }
 
     function runSimulation() {
-      const simulations = 1000;
-      let simSwitchWins = 0, simStayWins = 0;
+      const simCount = parseInt(document.getElementById('simCount').value) || 1000;
 
-      for (let i = 0; i < simulations; i++) {
-        const car = Math.floor(Math.random() * 3);
-        const pick = Math.floor(Math.random() * 3);
-        const possibleOpens = [0, 1, 2].filter(d => d !== pick && d !== car);
-        const opened = possibleOpens[Math.floor(Math.random() * possibleOpens.length)];
-        const switchedPick = [0, 1, 2].find(d => d !== pick && d !== opened);
-
-        if (switchedPick === car) simSwitchWins++;
-        if (pick === car) simStayWins++;
+      if (simCount < 10 || simCount > 100000) {
+        alert('Please enter a number between 10 and 100,000');
+        return;
       }
 
-      total = simulations;
-      switchWins = simSwitchWins;
-      stayWins = simStayWins;
+      let newSwitchWins = 0, newStayWins = 0;
+
+      // Run simulation
+      for (let i = 0; i < simCount; i++) {
+        const car = Math.floor(Math.random() * NUM_DOORS);
+        const pick = Math.floor(Math.random() * NUM_DOORS);
+        const possibleOpens = [];
+
+        // Find doors the host can open (not player's pick, not the car)
+        for (let d = 0; d < NUM_DOORS; d++) {
+          if (d !== pick && d !== car) {
+            possibleOpens.push(d);
+          }
+        }
+
+        const opened = possibleOpens[Math.floor(Math.random() * possibleOpens.length)];
+
+        // Find the door if player switches
+        let switchedPick;
+        for (let d = 0; d < NUM_DOORS; d++) {
+          if (d !== pick && d !== opened) {
+            switchedPick = d;
+            break;
+          }
+        }
+
+        if (switchedPick === car) newSwitchWins++;
+        if (pick === car) newStayWins++;
+      }
+
+      // Add to simulation totals
+      simTotal += simCount;
+      simSwitchWins += newSwitchWins;
+      simStayWins += newStayWins;
+
+      saveStats();
       updateStats();
-      status.innerText = "Simulation complete!";
+      status.innerText = `Simulation complete! Ran ${simCount.toLocaleString()} games.`;
     }
   </script>
 </body>
