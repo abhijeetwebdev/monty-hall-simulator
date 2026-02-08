@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Monty Hall Simulator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: #333;
+    }
+
+    .game {
+      background: #fff;
+      border-radius: 12px;
+      padding: 30px 40px;
+      width: 550px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+      text-align: center;
+      margin: 5rem 0;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    .doors {
+      display: flex;
+      justify-content: space-between;
+      margin: 25px 0;
+    }
+
+    .doors button {
+      width: 110px;
+      height: 140px;
+      font-size: 36px;
+      border-radius: 10px;
+      border: 2px solid #ccc;
+      background: #fafafa;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .doors button:hover:not(:disabled) {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .doors button:disabled {
+      cursor: default;
+      opacity: 1;
+      background: #fafafa;
+    }
+
+    .doors button.revealed {
+      font-size: 40px;
+      transition: font-size 0.3s ease;
+    }
+
+    .selected {
+      border-color: #1976d2;
+      background: #e3f2fd;
+      box-shadow: inset 0 0 0 2px #1976d2;
+    }
+
+    .status {
+      min-height: 28px;
+      font-weight: 500;
+      margin-bottom: 15px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .controls button {
+      padding: 10px 18px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .primary {
+      background: #1976d2;
+      color: #fff;
+    }
+
+    .primary:disabled {
+      background: #90caf9;
+      cursor: default;
+    }
+
+    .secondary {
+      background: #e0e0e0;
+    }
+
+    .secondary:disabled {
+      background: #f0f0f0;
+      cursor: default;
+    }
+
+    /* Stats & chart layout */
+    .stats-chart-container {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-around;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .stats-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 14px;
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #f9f9f9;
+      min-width: 160px;
+      margin-bottom: 15px;
+    }
+
+    canvas {
+      max-width: 300px;
+      max-height: 250px;
+    }
+
+    .line {
+      margin: 2rem 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="game">
+    <h2>Monty Hall Simulator</h2>
+
+    <div class="status" id="status">Pick a door</div>
+
+    <div class="doors">
+      <button id="d0" onclick="pickDoor(0)">🚪</button>
+      <button id="d1" onclick="pickDoor(1)">🚪</button>
+      <button id="d2" onclick="pickDoor(2)">🚪</button>
+    </div>
+
+    <div class="controls">
+      <button id="switchBtn" class="primary" onclick="finalChoice(true)" disabled>Switch</button>
+      <button id="stayBtn" class="secondary" onclick="finalChoice(false)" disabled>Stay</button>
+      <button id="revealBtn" class="primary" onclick="revealResult()" disabled>Reveal</button>
+      <button id="restartBtn" class="secondary" onclick="reset()" disabled>Restart</button>
+    </div>
+
+    <hr class="line">
+
+    <div class="controls">
+      <button id="simBtn" class="primary" onclick="runSimulation()">Run Simulation (1000)</button>
+    </div>
+    <div class="stats-chart-container">
+      <div class="stats-box">
+        <div>Total games: <span id="total">0</span></div>
+        <div>Switch wins: <span id="switchWins">0</span></div>
+        <div>Stay wins: <span id="stayWins">0</span></div>
+        <div>Switch win %: <span id="switchPct">0%</span></div>
+        <div>Stay win %: <span id="stayPct">0%</span></div>
+      </div>
+      <canvas id="resultChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    let carDoor, playerPick, openedDoor, finalPick, switched;
+    let total = 0, switchWins = 0, stayWins = 0;
+
+    const status = document.getElementById("status");
+    const switchBtn = document.getElementById("switchBtn");
+    const stayBtn = document.getElementById("stayBtn");
+    const revealBtn = document.getElementById("revealBtn");
+    const restartBtn = document.getElementById("restartBtn");
+
+    const totalEl = document.getElementById("total");
+    const switchWinsEl = document.getElementById("switchWins");
+    const stayWinsEl = document.getElementById("stayWins");
+    const switchPctEl = document.getElementById("switchPct");
+    const stayPctEl = document.getElementById("stayPct");
+
+    // Chart.js setup
+    const ctx = document.getElementById("resultChart").getContext("2d");
+    const chart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: ["Switch", "Stay"],
+        datasets: [{
+          label: "Win %",
+          data: [0, 0],
+          backgroundColor: ["#1976d2", "#e0e0e0"],
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            title: { display: true, text: "Win Percentage %" }
+          }
+        }
+      }
+    });
+
+    function reset() {
+      carDoor = Math.floor(Math.random() * 3);
+      playerPick = null;
+      openedDoor = null;
+      finalPick = null;
+      switched = false;
+
+      status.innerText = "Pick a door";
+
+      switchBtn.disabled = true;
+      stayBtn.disabled = true;
+      revealBtn.disabled = true;
+      restartBtn.disabled = true;
+
+      for (let i = 0; i < 3; i++) {
+        const d = document.getElementById("d" + i);
+        d.innerText = "🚪";
+        d.disabled = false;
+        d.classList.remove("selected", "revealed");
+      }
+    }
+
+    reset();
+
+    function pickDoor(choice) {
+      if (playerPick !== null) return;
+
+      playerPick = choice;
+      document.getElementById("d" + choice).classList.add("selected");
+
+      for (let i = 0; i < 3; i++) {
+        if (i !== playerPick && i !== carDoor) {
+          openedDoor = i;
+          break;
+        }
+      }
+
+      document.getElementById("d" + openedDoor).innerText = "🐐";
+      document.getElementById("d" + openedDoor).disabled = true;
+
+      status.innerText = "A goat is revealed. Switch or stay?";
+      switchBtn.disabled = false;
+      stayBtn.disabled = false;
+    }
+
+    function finalChoice(doSwitch) {
+      switched = doSwitch;
+      finalPick = playerPick;
+
+      if (doSwitch) {
+        finalPick = [0, 1, 2].find(d => d !== playerPick && d !== openedDoor);
+        document.getElementById("d" + playerPick).classList.remove("selected");
+        document.getElementById("d" + finalPick).classList.add("selected");
+      }
+
+      switchBtn.disabled = true;
+      stayBtn.disabled = true;
+      revealBtn.disabled = false;
+      status.innerText = "Ready to reveal the result";
+    }
+
+    function revealResult() {
+      total++;
+
+      for (let i = 0; i < 3; i++) {
+        const door = document.getElementById("d" + i);
+        door.innerText = i === carDoor ? "🚗" : "🐐";
+        door.disabled = true;
+        door.classList.add("revealed");
+      }
+
+      if (finalPick === carDoor) {
+        status.innerText = "🎉 You won the car!";
+        switched ? switchWins++ : stayWins++;
+      } else {
+        status.innerText = "🐐 You got a goat.";
+      }
+
+      updateStats();
+      revealBtn.disabled = true;
+      restartBtn.disabled = false;
+    }
+
+    function updateStats() {
+      totalEl.innerText = total;
+      switchWinsEl.innerText = switchWins;
+      stayWinsEl.innerText = stayWins;
+      switchPctEl.innerText = total ? ((switchWins / total) * 100).toFixed(2) + "%" : "0%";
+      stayPctEl.innerText = total ? ((stayWins / total) * 100).toFixed(2) + "%" : "0%";
+
+      chart.data.datasets[0].data = total ? [(switchWins / total) * 100, (stayWins / total) * 100] : [0, 0];
+      chart.update();
+    }
+
+    function runSimulation() {
+      const simulations = 1000;
+      let simSwitchWins = 0, simStayWins = 0;
+
+      for (let i = 0; i < simulations; i++) {
+        const car = Math.floor(Math.random() * 3);
+        const pick = Math.floor(Math.random() * 3);
+        const possibleOpens = [0, 1, 2].filter(d => d !== pick && d !== car);
+        const opened = possibleOpens[Math.floor(Math.random() * possibleOpens.length)];
+        const switchedPick = [0, 1, 2].find(d => d !== pick && d !== opened);
+
+        if (switchedPick === car) simSwitchWins++;
+        if (pick === car) simStayWins++;
+      }
+
+      total = simulations;
+      switchWins = simSwitchWins;
+      stayWins = simStayWins;
+      updateStats();
+      status.innerText = "Simulation complete!";
+    }
+  </script>
+</body>
+
+</html>
